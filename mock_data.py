@@ -277,10 +277,6 @@ def _seeded_random(seed: str) -> np.random.Generator:
     return np.random.default_rng(digest)
 
 
-def generate_incident_id(index: int) -> str:
-    return f"INC-{2026:04d}-{index + 1000:04d}"
-
-
 def generate_incident_id_for_service(service: str, base_time: datetime) -> str:
     rng = _seeded_random(f"incid-{service}-{base_time.isoformat()}")
     num = int(rng.integers(1000, 9999))
@@ -440,7 +436,7 @@ def generate_signal_evidence(services_data: list[dict]) -> list[dict]:
                 "Emails (1h)": svc["emails"],
                 "Tickets (1h)": svc["tickets"],
                 "Manual Flag": "Yes" if svc["manual_flags"] else "-",
-                "Check State": svc["technical_evidence"],
+                "Monitor Evidence": svc["technical_evidence"],
                 "Confidence": f'{svc["confidence"]:.0%}',
             }
         )

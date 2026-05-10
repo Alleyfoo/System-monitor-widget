@@ -187,6 +187,160 @@ def render_signal_table(evidence_rows: list[dict]):
     st.dataframe(df, width="stretch", hide_index=True)
 
 
+SHORT_NAMES = {
+    "Login / Authentication": "Login",
+    "Document generation": "Docs",
+    "Ticketing system": "Tickets",
+    "Data updates": "Data",
+    "File shares": "Files",
+    "Integrations": "Int",
+    "Messaging": "Msg",
+    "Reporting": "Reports",
+    "Search": "Search",
+    "Printing": "Print",
+}
+
+STATUS_DOT = {"green": "●", "orange": "◐", "red": "◉", "grey": "○", "blue": "◈"}
+
+
+def _compact_header_html(metrics: dict, services_data: list[dict]) -> str:
+    color = metrics["overall_color"]
+    red_count = sum(1 for s in services_data if s["status"] == "red")
+    orange_count = sum(1 for s in services_data if s["status"] == "orange")
+    return (
+        f'<div style="display:flex;align-items:center;gap:12px;'
+        f"padding:8px 0 12px;border-bottom:1px solid #E5E7EB;margin-bottom:12px;"
+        f'flex-wrap:wrap;">'
+        f'<span style="font-weight:700;font-size:15px;color:#111827;">Support Radar</span>'
+        f'<span style="font-size:18px;color:{color};">{STATUS_DOT.get(metrics["overall_status"], "●")}</span>'
+        f'<span style="font-size:12px;color:#DC2626;">{red_count} red</span>'
+        f'<span style="font-size:12px;color:#EA580C;">{orange_count} orange</span>'
+        f'<span style="font-size:12px;color:#9CA3AF;">{metrics["visibility_issues"]} grey</span>'
+        f'<span style="font-size:11px;color:#9CA3AF;margin-left:auto;">'
+        f'Last checked {metrics["last_updated"]}</span>'
+        f"</div>"
+    )
+
+
+def render_compact_header(metrics: dict, services_data: list[dict]):
+    st.markdown(_compact_header_html(metrics, services_data), unsafe_allow_html=True)
+
+
+def render_compact_service_lights(
+    services_data: list[dict],
+    view_fields: dict,
+    show_healthy: bool = True,
+) -> bool:
+    severity_order = {"red": 0, "orange": 1, "grey": 2, "blue": 3, "green": 4}
+    sorted_svcs = sorted(
+        services_data, key=lambda s: severity_order.get(s["status"], 5)
+    )
+
+    green_svcs = [s for s in sorted_svcs if s["status"] == "green"]
+    non_green = [s for s in sorted_svcs if s["status"] != "green"]
+
+    clicked_service = None
+
+    html_parts = [
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
+    ]
+    for svc in non_green:
+        short = SHORT_NAMES.get(svc["service"], svc["service"])
+        color = svc["status_color"]
+        dot = STATUS_DOT[svc["status"]]
+        badge = ""
+        if svc["status"] in ("red", "orange") and (svc["calls"] + svc["tickets"]) > 0:
+            badge = f' <span style="font-size:10px;color:#6B7280;">{svc["calls"] + svc["tickets"]}</span>'
+        html_parts.append(
+            f'<div style="background:white;border:1.5px solid {color};border-radius:6px;'
+            f"padding:5px 10px;display:flex;align-items:center;gap:5px;"
+            f'font-size:12px;font-weight:500;color:#111827;white-space:nowrap;">'
+            f'<span style="font-size:14px;color:{color};">{dot}</span>'
+            f"{short}{badge}"
+            f"</div>"
+        )
+
+    if show_healthy and green_svcs:
+        html_parts.append(
+            f'<span style="font-size:11px;color:#9CA3AF;margin-left:4px;">'
+            f"{len(green_svcs)} healthy</span>"
+        )
+    elif not show_healthy and green_svcs:
+        html_parts.append(
+            f'<span style="font-size:11px;color:#9CA3AF;margin-left:4px;">'
+            f"{len(green_svcs)} healthy services hidden</span>"
+        )
+
+    html_parts.append("</div>")
+    st.markdown("".join(html_parts), unsafe_allow_html=True)
+
+    st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+    cols = st.columns(min(len(sorted_svcs), 10))
+    for i, svc in enumerate(sorted_svcs):
+        short = SHORT_NAMES.get(svc["service"], svc["service"])
+        color = svc["status_color"]
+        dot = STATUS_DOT[svc["status"]]
+        with cols[i % 10]:
+            if st.button(
+                f"{dot} {short}",
+                key=f"clight_{i}",
+                use_container_width=True,
+                help=f'{svc["service"]}: {svc["status_label"]}',
+            ):
+                clicked_service = svc["service"]
+
+    return clicked_service
+
+
+def render_compact_detail(svc: dict, view_fields: dict):
+    color = svc["status_color"]
+
+    st.markdown("---")
+    st.markdown(f"#### {svc['service']} — {svc['status_label']}")
+
+    st.markdown(f"**User Impact:** {svc['impact_text']}")
+    if svc.get("incident_id"):
+        st.markdown(f"**Incident ID:** `{svc['incident_id']}`")
+    st.markdown(
+        f"**System Status:** {svc.get('host_module_plain', 'No data available.')}"
+    )
+
+    st.markdown("**What to say to caller:**")
+    st.info(svc["what_to_say"])
+
+    st.markdown("**What to collect:**")
+    if svc["what_to_collect"]:
+        for item in svc["what_to_collect"]:
+            st.markdown(f"- {item}")
+    else:
+        st.markdown("- Nothing specific")
+
+    with st.expander("Affected workflows"):
+        if svc.get("affected_workflows"):
+            for wf in svc["affected_workflows"]:
+                st.markdown(f"- {wf}")
+        else:
+            st.markdown("No workflow data available.")
+
+    with st.expander("Caller reports"):
+        st.markdown(svc.get("support_evidence", "No data"))
+
+    if view_fields["show_technical_evidence"]:
+        with st.expander("Technical evidence"):
+            st.markdown(svc.get("technical_evidence", "No data"))
+
+    st.markdown("---")
+    st.markdown("#### Copy/Paste Ticket Note")
+    note = _build_ticket_note(svc)
+    st.text_area(
+        "Copy this note into your ticket system",
+        value=note,
+        height=280,
+        key=f"cnote_{svc['service']}",
+        label_visibility="collapsed",
+    )
+
+
 def render_known_issues(issues: list[dict]):
     if not issues:
         st.info("No active service notices.")

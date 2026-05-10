@@ -11,6 +11,7 @@ This dashboard shows how a support desk can monitor service/module health, detec
 - **10 service/module cards**: Login/Authentication, Search, Document Generation, Printing, Messaging, Integrations, Data Updates, Reporting, File Shares, Ticketing System
 - **5 pre-built scenarios**: Normal day, Printing/document generation incident, Login degradation, Integration/data delay, Unknown monitoring status
 - **3 view modes**: Support desk (simplified, caller-facing), Manager (confidence + timeline), Technical (full details including host/module status and technical evidence)
+- **2 display modes**: Compact widget (small service lights for support-desk screens) and Full dashboard (complete view with metrics, notices, cards, and signal table)
 - **Status filter**: Filter cards by Red, Orange, Grey, Blue, or Green
 - **Top summary metrics**: Overall status, known incidents, visibility issues, planned maintenance, tickets last hour, call spike percentage, last updated
 - **Active service notices**: Separates confirmed incidents (red/orange) from visibility issues (grey) and planned maintenance (blue)
@@ -91,6 +92,18 @@ This sequence tells a realistic support-desk story using the pre-built scenarios
 6. **Use the Status Filter** — Filter to only "Red" or only "Grey" to show how agents can focus on specific severity levels.
 
 7. **Click "Refresh mock data"** — Show that the data regenerates with new timestamps and counts while keeping the same scenario structure.
+
+## Compact Widget Mode
+
+The compact widget mode is intended for a support-desk screen where agents only need small service lights until something requires attention. It shows:
+
+- A one-line summary header with overall status and counts (red, orange, grey)
+- Small clickable service buttons with short names and status dots
+- A "Show healthy services" checkbox to collapse green services into a summary line
+- Clicking a service light opens a compact detail panel with user impact, system status, what to say, what to collect, and a copy/paste ticket note
+- Affected workflows, caller reports, and technical evidence are tucked into expanders
+
+Switch to "Full dashboard" mode to see the complete view with metrics, active service notices, large service cards, and the signal evidence table.
 
 ## Important Notes
 

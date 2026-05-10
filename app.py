@@ -10,6 +10,9 @@ import numpy as np
 import streamlit as st
 
 from components import (
+    render_compact_detail,
+    render_compact_header,
+    render_compact_service_lights,
     render_detail_panel,
     render_known_issues,
     render_service_card,
@@ -140,6 +143,14 @@ def main():
         )
 
         st.markdown("### Configuration")
+        display_mode = st.selectbox(
+            "Display Mode",
+            ["Compact widget", "Full dashboard"],
+            index=0,
+            key="display_mode_select",
+            help="Compact widget: small service lights. Full dashboard: complete view with metrics and notices.",
+        )
+
         scenario_name = st.selectbox(
             "Scenario",
             list(SCENARIOS.keys()),
@@ -163,6 +174,15 @@ def main():
             key="view_mode_select",
             help="Support desk: simplified view. Manager: confidence + timeline. Technical: full details.",
         )
+
+        show_healthy = True
+        if display_mode == "Compact widget":
+            show_healthy = st.checkbox(
+                "Show healthy services",
+                value=True,
+                key="show_healthy_checkbox",
+                help="When unchecked, green services are collapsed into a summary line.",
+            )
 
         st.markdown("---")
         if st.button("Refresh mock data", use_container_width=True, type="primary"):
@@ -200,63 +220,85 @@ def main():
     filtered_services = sort_services_by_severity(filtered_services)
 
     # ── Page header ───────────────────────────────────────────────────────────
-    st.markdown(
-        '<div style="display:flex;align-items:center;justify-content:space-between;'
-        'padding:0 0 16px;border-bottom:1px solid #E5E7EB;margin-bottom:20px;">'
-        "<div>"
-        '<h1 style="margin:0;">Support Desk Incident Radar</h1>'
-        f'<p style="margin:4px 0 0;color:#6B7280;font-size:13px;">{scenario["description"]}</p>'
-        "</div>"
-        f'<span style="font-size:11px;color:#9CA3AF;font-family:monospace;">'
-        f"Scenario: {scenario_name} | Mode: {view_mode}</span>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    if display_mode == "Compact widget":
+        render_compact_header(metrics, services_data)
+    else:
+        st.markdown(
+            '<div style="display:flex;align-items:center;justify-content:space-between;'
+            'padding:0 0 16px;border-bottom:1px solid #E5E7EB;margin-bottom:20px;">'
+            "<div>"
+            '<h1 style="margin:0;">Support Desk Incident Radar</h1>'
+            f'<p style="margin:4px 0 0;color:#6B7280;font-size:13px;">{scenario["description"]}</p>'
+            "</div>"
+            f'<span style="font-size:11px;color:#9CA3AF;font-family:monospace;">'
+            f"Scenario: {scenario_name} | Mode: {view_mode}</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-    # ── Top summary metrics ───────────────────────────────────────────────────
-    st.markdown("### Summary")
-    render_top_metrics(metrics)
+    if display_mode == "Compact widget":
+        # ── Compact widget mode ────────────────────────────────────────────────
+        clicked = render_compact_service_lights(
+            services_data, view_fields, show_healthy=show_healthy
+        )
+        if clicked:
+            st.session_state.selected_service = clicked
 
-    # ── Active service notices ────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### Active Service Notices")
-    render_known_issues(known_issues)
+        selected_svc = None
+        if st.session_state.selected_service:
+            for svc in services_data:
+                if svc["service"] == st.session_state.selected_service:
+                    selected_svc = svc
+                    break
 
-    # ── Service cards grid ────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### Service / Module Status")
+        if selected_svc:
+            render_compact_detail(selected_svc, view_fields)
+    else:
+        # ── Full dashboard mode ────────────────────────────────────────────────
+        # Top summary metrics
+        st.markdown("### Summary")
+        render_top_metrics(metrics)
 
-    cols = st.columns(3)
+        # Active service notices
+        st.markdown("---")
+        st.markdown("### Active Service Notices")
+        render_known_issues(known_issues)
 
-    for i, svc in enumerate(filtered_services):
-        with cols[i % 3]:
-            clicked = render_service_card(svc, view_fields, key=f"card_{i}")
-            if clicked:
-                st.session_state.selected_service = svc["service"]
+        # Service cards grid
+        st.markdown("---")
+        st.markdown("### Service / Module Status")
 
-    # ── Detail panel for selected service ─────────────────────────────────────
-    selected_svc = None
-    if st.session_state.selected_service:
-        for svc in services_data:
-            if svc["service"] == st.session_state.selected_service:
-                selected_svc = svc
-                break
+        cols = st.columns(3)
 
-        if selected_svc is None:
-            st.info(
-                f"Previously selected service '{st.session_state.selected_service}' "
-                "is not visible with the current filter."
-            )
-        else:
-            st.markdown("---")
-            render_detail_panel(selected_svc, view_fields)
+        for i, svc in enumerate(filtered_services):
+            with cols[i % 3]:
+                clicked = render_service_card(svc, view_fields, key=f"card_{i}")
+                if clicked:
+                    st.session_state.selected_service = svc["service"]
 
-            if view_fields["show_timeline"]:
-                render_timeline(selected_svc)
+        # Detail panel for selected service
+        selected_svc = None
+        if st.session_state.selected_service:
+            for svc in services_data:
+                if svc["service"] == st.session_state.selected_service:
+                    selected_svc = svc
+                    break
 
-    # ── Signal evidence table ─────────────────────────────────────────────────
-    st.markdown("---")
-    render_signal_table(evidence_rows)
+            if selected_svc is None:
+                st.info(
+                    f"Previously selected service '{st.session_state.selected_service}' "
+                    "is not visible with the current filter."
+                )
+            else:
+                st.markdown("---")
+                render_detail_panel(selected_svc, view_fields)
+
+                if view_fields["show_timeline"]:
+                    render_timeline(selected_svc)
+
+        # Signal evidence table
+        st.markdown("---")
+        render_signal_table(evidence_rows)
 
     # ── Footer ────────────────────────────────────────────────────────────────
     st.markdown("---")
