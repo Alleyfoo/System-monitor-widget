@@ -31,11 +31,13 @@ def render_top_metrics(metrics: dict):
 def render_service_card(svc: dict, view_fields: dict, key: str) -> bool:
     color = svc["status_color"]
     label = svc["status_label"]
-    emoji = {"green": "●", "orange": "◐", "red": "◉", "grey": "○", "blue": "◈"}[svc["status"]]
+    emoji = {"green": "●", "orange": "◐", "red": "◉", "grey": "○", "blue": "◈"}[
+        svc["status"]
+    ]
 
     card_html = (
         f'<div style="background:white;border:2px solid {color};border-radius:10px;'
-        f'padding:18px 16px;cursor:pointer;transition:box-shadow 0.15s;'
+        f"padding:18px 16px;cursor:pointer;transition:box-shadow 0.15s;"
         f'box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
         f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
         f'<span style="font-weight:600;font-size:15px;color:#111827;">{svc["service"]}</span>'
@@ -129,7 +131,7 @@ def render_signal_table(evidence_rows: list[dict]):
     import pandas as pd
 
     df = pd.DataFrame(evidence_rows)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_known_issues(issues: list[dict]):
