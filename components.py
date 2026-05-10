@@ -274,9 +274,14 @@ def render_compact_service_lights(
     html_parts.append("</div>")
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
+    visible_svcs = sorted_svcs if show_healthy else non_green
+    if not visible_svcs:
+        st.info("All services are healthy.")
+        return None
+
     st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
-    cols = st.columns(min(len(sorted_svcs), 10))
-    for i, svc in enumerate(sorted_svcs):
+    cols = st.columns(min(len(visible_svcs), 10))
+    for i, svc in enumerate(visible_svcs):
         short = SHORT_NAMES.get(svc["service"], svc["service"])
         color = svc["status_color"]
         dot = STATUS_DOT[svc["status"]]
