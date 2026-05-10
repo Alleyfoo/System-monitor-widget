@@ -4,7 +4,7 @@ import streamlit as st
 
 
 def render_top_metrics(metrics: dict):
-    cols = st.columns(6)
+    cols = st.columns(7)
     with cols[0]:
         color = metrics["overall_color"]
         st.markdown(
@@ -19,12 +19,14 @@ def render_top_metrics(metrics: dict):
     with cols[1]:
         st.metric("Known Incidents", metrics["known_incidents"])
     with cols[2]:
-        st.metric("Warning Signals", metrics["warning_signals"])
+        st.metric("Visibility Issues", metrics["visibility_issues"])
     with cols[3]:
-        st.metric("Tickets (1h)", metrics["tickets_last_hour"])
+        st.metric("Planned Maint.", metrics["planned_maintenance"])
     with cols[4]:
-        st.metric("Call Spike", f'{metrics["call_spike_pct"]}%')
+        st.metric("Tickets (1h)", metrics["tickets_last_hour"])
     with cols[5]:
+        st.metric("Call Spike", f'{metrics["call_spike_pct"]}%')
+    with cols[6]:
         st.metric("Last Updated", metrics["last_updated"])
 
 
@@ -37,7 +39,7 @@ def render_service_card(svc: dict, view_fields: dict, key: str) -> bool:
 
     card_html = (
         f'<div style="background:white;border:2px solid {color};border-radius:10px;'
-        f"padding:18px 16px;cursor:pointer;transition:box-shadow 0.15s;"
+        f"padding:18px 16px;transition:box-shadow 0.15s;"
         f'box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
         f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
         f'<span style="font-weight:600;font-size:15px;color:#111827;">{svc["service"]}</span>'
@@ -72,12 +74,17 @@ def render_detail_panel(svc: dict, view_fields: dict):
     with col1:
         st.markdown(f"**Status:** :{color}[{svc['status_label']}]")
         st.markdown(f"**User Impact:** {svc['impact_text']}")
+        if svc.get("incident_id"):
+            st.markdown(f"**Incident ID:** `{svc['incident_id']}`")
         if view_fields["show_host_status"]:
             st.markdown(f"**Host Status:** `{svc['host_status']}`")
-        if view_fields["show_module_status"]:
             st.markdown(f"**Module Status:** `{svc['module_status']}`")
+        else:
+            st.markdown(
+                f"**System Status:** {svc.get('host_module_plain', 'No data available.')}"
+            )
         if view_fields["show_evidence_source"]:
-            st.markdown(f"**Evidence Source:** `{svc['evidence_source']}`")
+            st.markdown(f"**Evidence:** {svc['evidence_source']}")
 
     with col2:
         st.markdown("**What to say to caller:**")
@@ -93,7 +100,7 @@ def render_detail_panel(svc: dict, view_fields: dict):
     for item in svc["what_not_to_do"]:
         st.warning(item)
 
-    st.markdown(f"**Escalation:** `{svc['support_instruction']}`")
+    st.markdown(f"**Escalation:** {svc['support_instruction']}")
 
 
 def render_timeline(svc: dict):

@@ -6,6 +6,7 @@ signals into customer-service guidance. No real systems, no real data.
 
 from datetime import datetime, timezone
 
+import numpy as np
 import streamlit as st
 
 from components import (
@@ -143,6 +144,7 @@ def main():
             "Scenario",
             list(SCENARIOS.keys()),
             index=0,
+            key="scenario_select",
             help="Select a pre-built incident scenario",
         )
 
@@ -150,6 +152,7 @@ def main():
             "Status Filter",
             ["All", "Red", "Orange", "Grey", "Blue", "Green"],
             index=0,
+            key="status_filter_select",
             help="Filter service cards by status",
         )
 
@@ -157,8 +160,16 @@ def main():
             "View Mode",
             ["Support desk", "Manager", "Technical"],
             index=0,
+            key="view_mode_select",
             help="Support desk: simplified view. Manager: confidence + timeline. Technical: full details.",
         )
+
+        st.markdown("---")
+        if st.button("Refresh mock data", use_container_width=True, type="primary"):
+            st.session_state.mock_seed = int(np.random.default_rng().integers(0, 2**31))
+            st.session_state.base_time = datetime.now(timezone.utc)
+            st.session_state.selected_service = None
+            st.rerun()
 
         st.markdown("---")
         st.markdown(
@@ -168,8 +179,17 @@ def main():
             unsafe_allow_html=True,
         )
 
+    # ── Initialize / retrieve session state ───────────────────────────────────
+    if "mock_seed" not in st.session_state:
+        st.session_state.mock_seed = int(np.random.default_rng().integers(0, 2**31))
+    if "base_time" not in st.session_state:
+        st.session_state.base_time = datetime.now(timezone.utc)
+    if "selected_service" not in st.session_state:
+        st.session_state.selected_service = None
+
+    base_time = st.session_state.base_time
+
     # ── Load scenario data ────────────────────────────────────────────────────
-    base_time = datetime.now(timezone.utc)
     scenario = load_scenario(scenario_name, base_time)
     services_data = scenario["services"]
     view_fields = get_view_mode_fields(view_mode)
@@ -186,12 +206,12 @@ def main():
     st.markdown(
         '<div style="display:flex;align-items:center;justify-content:space-between;'
         'padding:0 0 16px;border-bottom:1px solid #E5E7EB;margin-bottom:20px;">'
-        '<div>'
+        "<div>"
         '<h1 style="margin:0;">Support Desk Incident Radar</h1>'
         f'<p style="margin:4px 0 0;color:#6B7280;font-size:13px;">{scenario["description"]}</p>'
         "</div>"
         f'<span style="font-size:11px;color:#9CA3AF;font-family:monospace;">'
-        f'Scenario: {scenario_name} | Mode: {view_mode}</span>'
+        f"Scenario: {scenario_name} | Mode: {view_mode}</span>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -210,21 +230,32 @@ def main():
     st.markdown("### Service / Module Status")
 
     cols = st.columns(3)
-    selected_service = None
 
     for i, svc in enumerate(filtered_services):
         with cols[i % 3]:
             clicked = render_service_card(svc, view_fields, key=f"card_{i}")
             if clicked:
-                selected_service = svc
+                st.session_state.selected_service = svc["service"]
 
     # ── Detail panel for selected service ─────────────────────────────────────
-    if selected_service:
-        st.markdown("---")
-        render_detail_panel(selected_service, view_fields)
+    selected_svc = None
+    if st.session_state.selected_service:
+        for svc in services_data:
+            if svc["service"] == st.session_state.selected_service:
+                selected_svc = svc
+                break
 
-        if view_fields["show_timeline"]:
-            render_timeline(selected_service)
+        if selected_svc is None:
+            st.info(
+                f"Previously selected service '{st.session_state.selected_service}' "
+                "is not visible with the current filter."
+            )
+        else:
+            st.markdown("---")
+            render_detail_panel(selected_svc, view_fields)
+
+            if view_fields["show_timeline"]:
+                render_timeline(selected_svc)
 
     # ── Signal evidence table ─────────────────────────────────────────────────
     st.markdown("---")

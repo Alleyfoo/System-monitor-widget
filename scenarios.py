@@ -6,7 +6,12 @@ support-desk situation. All data is synthetic.
 
 from datetime import datetime, timezone
 
-from mock_data import SERVICES, generate_service_data, generate_timeline_events
+from mock_data import (
+    SERVICES,
+    generate_incident_id_for_service,
+    generate_service_data,
+    generate_timeline_events,
+)
 
 SCENARIOS = {
     "Normal day": {
@@ -98,7 +103,10 @@ def load_scenario(name: str, base_time: datetime | None = None) -> dict:
     services_data = []
     for service in SERVICES:
         status = scenario["services"].get(service, "green")
-        svc = generate_service_data(service, status, base_time)
+        incident_id = ""
+        if status != "green":
+            incident_id = generate_incident_id_for_service(service, base_time)
+        svc = generate_service_data(service, status, base_time, incident_id)
         svc["timeline"] = generate_timeline_events(service, status, base_time)
         services_data.append(svc)
 
