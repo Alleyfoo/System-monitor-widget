@@ -6,7 +6,6 @@ signals into customer-service guidance. No real systems, no real data.
 
 from datetime import datetime, timezone
 
-import numpy as np
 import streamlit as st
 
 from components import (
