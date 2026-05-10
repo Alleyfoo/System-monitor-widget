@@ -6,6 +6,37 @@ A synthetic Streamlit mockup dashboard for demonstrating an early-warning suppor
 
 This dashboard shows how a support desk can monitor service/module health, detect known issues, and provide clear guidance to agents handling customer calls. It demonstrates that a host/system can be technically **up** while one internal module or workflow is **degraded or down**.
 
+## Architecture Concept
+
+The intended safe architecture separates monitoring from display:
+
+```
+Approved monitoring checks / synthetic tests
+        ↓
+Structured JSON status output
+        ↓
+Dashboard reads status data (read-only)
+        ↓
+Support desk sees compact lights and guidance
+```
+
+**The dashboard should not directly access** production systems, restricted application internals, patient/customer records, or databases. It is a read-only viewer that consumes pre-computed status data produced by approved monitoring checks or synthetic tests running in a separate, controlled environment.
+
+A JSON status payload could include fields such as:
+
+- `service` — human-readable service name
+- `status` — one of `green`, `orange`, `red`, `grey`, `blue`
+- `last_checked` — timestamp of the most recent check
+- `impact_text` — user-facing summary of current impact
+- `support_instruction` — guidance for support desk agents
+- `incident_id` — reference ID for active incidents
+- `affected_workflows` — list of workflows within the blast radius
+- `technical_evidence` — safe technical detail where disclosure is permitted
+
+This separation ensures the dashboard never needs credentials, direct network access, or query access to operational systems. The monitoring layer owns the checks; the dashboard owns the display.
+
+**The current mockup is synthetic-only.** All data is generated in-process for demonstration. In a real deployment, `mock_data.py` would be replaced by a module that reads the JSON output of your monitoring layer.
+
 ## Features
 
 - **10 service/module cards**: Login/Authentication, Search, Document Generation, Printing, Messaging, Integrations, Data Updates, Reporting, File Shares, Ticketing System

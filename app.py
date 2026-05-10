@@ -245,10 +245,25 @@ def main():
 
         selected_svc = None
         if st.session_state.selected_service:
-            for svc in services_data:
-                if svc["service"] == st.session_state.selected_service:
-                    selected_svc = svc
-                    break
+            visible_names = {
+                svc["service"]
+                for svc in (
+                    services_data
+                    if show_healthy
+                    else [s for s in services_data if s["status"] != "green"]
+                )
+            }
+            if st.session_state.selected_service not in visible_names:
+                st.info(
+                    f"Selected service '{st.session_state.selected_service}' "
+                    "is hidden by the current compact filter."
+                )
+                st.session_state.selected_service = None
+            else:
+                for svc in services_data:
+                    if svc["service"] == st.session_state.selected_service:
+                        selected_svc = svc
+                        break
 
         if selected_svc:
             render_compact_detail(selected_svc, view_fields)
