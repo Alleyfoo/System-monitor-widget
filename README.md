@@ -10,13 +10,14 @@ This dashboard shows how a support desk can monitor service/module health, detec
 
 - **10 service/module cards**: Login/Authentication, Search, Document Generation, Printing, Messaging, Integrations, Data Updates, Reporting, File Shares, Ticketing System
 - **5 pre-built scenarios**: Normal day, Printing/document generation incident, Login degradation, Integration/data delay, Unknown monitoring status
-- **3 view modes**: Support desk (simplified), Manager (confidence + timeline), Technical (full details including host/module status and evidence source)
+- **3 view modes**: Support desk (simplified, caller-facing), Manager (confidence + timeline), Technical (full details including host/module status and technical evidence)
 - **Status filter**: Filter cards by Red, Orange, Grey, Blue, or Green
-- **Top summary metrics**: Overall status, known incidents, warning signals, tickets last hour, call spike percentage, last updated
-- **Active known issues**: Incident title, status, start time, affected service, owner, incident ID, support instruction
-- **Detail panel**: User impact, host status, module status, evidence, what to say to caller, what to collect, what not to do, escalation link
+- **Top summary metrics**: Overall status, known incidents, visibility issues, planned maintenance, tickets last hour, call spike percentage, last updated
+- **Active service notices**: Separates confirmed incidents (red/orange) from visibility issues (grey) and planned maintenance (blue)
+- **Detail panel**: User impact, system status, incident ID, affected workflows, caller reports or technical evidence, what to say to caller, what to collect, what not to do, escalation
+- **Copy/paste ticket note**: Pre-formatted caller handling note for ticket system entry
 - **Timeline**: Incident evolution for each service
-- **Signal evidence table**: Calls, emails, tickets, manual flags, synthetic check state
+- **Signal evidence table**: Calls, emails, tickets, manual flags, technical check state
 
 ## Status Rules
 
@@ -31,14 +32,14 @@ This dashboard shows how a support desk can monitor service/module health, detec
 ## Requirements
 
 - Python 3.10+
-- Streamlit
+- Streamlit >= 1.33.0
 - NumPy
 - Pandas
 
 Install dependencies:
 
 ```bash
-pip install streamlit numpy pandas
+pip install -r requirements.txt
 ```
 
 ## Running the Dashboard
@@ -56,7 +57,40 @@ streamlit run app.py
 | `scenarios.py`  | 5 pre-built incident scenario definitions    |
 | `scoring.py`    | Status filtering, sorting, and view mode logic|
 | `components.py` | Reusable UI components (cards, panels, tables)|
+| `requirements.txt` | Python dependencies                              |
 | `README.md`     | This file                                    |
+
+## Suggested Demo Flow
+
+This sequence tells a realistic support-desk story using the pre-built scenarios:
+
+1. **Start with "Normal day"** — All 10 services green. Show the summary metrics and note the calm state. Explain that this is the baseline the support desk sees on a typical day.
+
+2. **Switch to "Printing / document generation incident"** — Two services change: Printing goes red, Document generation goes orange. Point out:
+   - The overall status changes to red.
+   - Known Incidents shows 2, Visibility Issues shows 0.
+   - The Active Service Notices panel lists both affected services with incident IDs and support instructions.
+
+3. **Click "View details" on Printing** — The detail panel opens. Walk through:
+   - **User Impact** and **System Status** (plain-language, not raw host/module labels).
+   - **Affected Workflows** showing the blast radius (printed documents, labels, physical output queue, batch print jobs).
+   - **Caller Reports** describing what agents are hearing from users.
+   - **What to say / What to collect / What NOT to do** — the support guidance.
+   - **Copy/Paste Ticket Note** — show how an agent copies this into the ticket system.
+
+4. **Switch view mode to "Technical"** — The same detail panel now shows:
+   - Raw **Host Status** and **Module Status** labels.
+   - **Technical Evidence** with specific error codes, node names, and metrics.
+   - **Incident Timeline** with the progression from green → orange → red.
+
+5. **Switch to "Unknown monitoring status"** — Multiple services go grey. Point out:
+   - Visibility Issues metric shows 4 (not counted as Known Incidents).
+   - Grey services appear in Active Service Notices but are clearly labeled "Unknown" — not confirmed incidents.
+   - The support guidance says "Monitoring data is unavailable" and instructs agents to collect caller details.
+
+6. **Use the Status Filter** — Filter to only "Red" or only "Grey" to show how agents can focus on specific severity levels.
+
+7. **Click "Refresh mock data"** — Show that the data regenerates with new timestamps and counts while keeping the same scenario structure.
 
 ## Important Notes
 

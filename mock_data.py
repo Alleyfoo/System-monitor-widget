@@ -122,7 +122,7 @@ HOST_MODULE_TRANSLATION = {
     ): "The main system is reachable. This service is undergoing planned maintenance.",
 }
 
-SERVICE_EVIDENCE = {
+TECHNICAL_EVIDENCE = {
     "Printing": {
         "orange": "Print spooler queue depth at 340 jobs (normal: <50). Multiple users reporting 'stuck in queue' status.",
         "red": "Print spooler service crashed on nodes PRN-01 and PRN-02. 47 failed jobs in last 15 minutes. Error: SPOOL-E-001.",
@@ -163,6 +163,112 @@ SERVICE_EVIDENCE = {
         "orange": "Ticket creation API latency at 5s (baseline: 0.3s). Database connection pool at 90% utilization.",
         "red": "Ticketing system database replication lag at 12 minutes. New tickets not visible to agents.",
     },
+}
+
+SUPPORT_EVIDENCE = {
+    "Printing": {
+        "orange": "Multiple callers report documents stuck in 'processing' status. No printed output received in last 20 minutes for some users.",
+        "red": "Callers cannot print any documents. Error messages mention 'service unavailable'. High call volume from clinical and admin staff.",
+    },
+    "Document generation": {
+        "orange": "Users report documents taking much longer than usual to generate. Some documents timing out after 30 seconds.",
+        "red": "Document preview and PDF generation failing for most users. Archive exports also affected.",
+    },
+    "Login / Authentication": {
+        "orange": "Some users unable to log in on first attempt. 'Connection timed out' errors appearing intermittently.",
+        "red": "Majority of users cannot log in. LDAP authentication errors displayed. Critical impact on all workflows.",
+    },
+    "Integrations": {
+        "orange": "External data not updating as expected. Users seeing stale information from third-party services.",
+        "red": "Third-party service integration completely down. Scheduled exports failing. Downstream systems not receiving data.",
+    },
+    "Data updates": {
+        "orange": "Recent data changes not reflected in reports. Users seeing information that is 45+ minutes old.",
+        "red": "No data updates processed in last 2 hours. Reports and search results showing outdated information.",
+    },
+    "Reporting": {
+        "orange": "Scheduled reports running behind. Users waiting longer than usual for report generation.",
+        "red": "Reports failing to generate. Users receiving error messages when trying to view or export reports.",
+    },
+    "Messaging": {
+        "orange": "Some messages delayed. Users reporting notifications arriving 5-10 minutes late.",
+        "red": "Internal messaging unavailable. Notifications not being delivered. Team communication disrupted.",
+    },
+    "Search": {
+        "orange": "Search results loading slowly. Some recent documents not appearing in search results.",
+        "red": "Search returning incomplete or no results. Users unable to find documents and records.",
+    },
+    "File shares": {
+        "orange": "File access slower than usual. Some users experiencing timeouts when opening shared files.",
+        "red": "Cannot save or modify files on shared drives. Read-only access only. Workflows requiring file writes are blocked.",
+    },
+    "Ticketing system": {
+        "orange": "Ticket creation slower than normal. Some agents reporting delays in ticket visibility.",
+        "red": "New tickets not appearing in agent queues. Unable to create or update support tickets.",
+    },
+}
+
+AFFECTED_WORKFLOWS = {
+    "Login / Authentication": [
+        "User login and session management",
+        "Password reset and account recovery",
+        "Single sign-on to dependent applications",
+        "Role-based access control checks",
+    ],
+    "Search": [
+        "Document and record search",
+        "Patient/customer lookup",
+        "Full-text search across archives",
+        "Search-driven report filters",
+    ],
+    "Document generation": [
+        "Document preview and rendering",
+        "PDF generation and download",
+        "Archive export and batch processing",
+        "Printing dependency (generated documents)",
+    ],
+    "Printing": [
+        "Printed documents and forms",
+        "Label and barcode printing",
+        "Physical output queue management",
+        "Batch print jobs from other modules",
+    ],
+    "Messaging": [
+        "Internal notifications and alerts",
+        "Team chat and direct messaging",
+        "System-generated email notifications",
+        "In-app announcement banners",
+    ],
+    "Integrations": [
+        "Third-party API data exchange",
+        "External data sync and import",
+        "Scheduled export jobs",
+        "Downstream system data feeds",
+    ],
+    "Data updates": [
+        "Real-time data pipeline processing",
+        "Batch data imports and ETL jobs",
+        "Report data freshness",
+        "Search index updates",
+    ],
+    "Reporting": [
+        "Scheduled report generation",
+        "Ad-hoc report builder",
+        "Dashboard and KPI widgets",
+        "Data export to CSV/Excel/PDF",
+    ],
+    "File shares": [
+        "Shared drive access and browsing",
+        "File upload and version management",
+        "Collaborative document editing",
+        "Attachment handling in other modules",
+    ],
+    "Ticketing system": [
+        "Support ticket creation and tracking",
+        "Agent queue management",
+        "Ticket assignment and escalation",
+        "SLA tracking and reporting",
+    ],
 }
 
 
@@ -242,12 +348,19 @@ def generate_service_data(
         "System status information is unavailable.",
     )
 
-    evidence_source = "no data"
+    technical_evidence = "no data"
+    support_evidence = "no data"
     if status != "grey":
-        svc_evidence = SERVICE_EVIDENCE.get(service, {})
-        evidence_source = svc_evidence.get(
+        svc_tech = TECHNICAL_EVIDENCE.get(service, {})
+        technical_evidence = svc_tech.get(
             status, "synthetic check — all monitors nominal"
         )
+        svc_support = SUPPORT_EVIDENCE.get(service, {})
+        support_evidence = svc_support.get(
+            status, "No unusual caller reports at this time."
+        )
+
+    affected_workflows = AFFECTED_WORKFLOWS.get(service, [])
 
     return {
         "service": service,
@@ -264,7 +377,9 @@ def generate_service_data(
         "host_status": host_status,
         "module_status": module_status,
         "host_module_plain": host_module_plain,
-        "evidence_source": evidence_source,
+        "technical_evidence": technical_evidence,
+        "support_evidence": support_evidence,
+        "affected_workflows": affected_workflows,
         "incident_id": incident_id,
         "what_to_say": WHAT_TO_SAY[status].format(
             service=service, maintenance_end="14:00"
@@ -325,7 +440,7 @@ def generate_signal_evidence(services_data: list[dict]) -> list[dict]:
                 "Emails (1h)": svc["emails"],
                 "Tickets (1h)": svc["tickets"],
                 "Manual Flag": "Yes" if svc["manual_flags"] else "-",
-                "Check State": svc["evidence_source"],
+                "Check State": svc["technical_evidence"],
                 "Confidence": f'{svc["confidence"]:.0%}',
             }
         )

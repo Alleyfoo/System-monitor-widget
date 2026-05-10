@@ -64,6 +64,32 @@ def render_service_card(svc: dict, view_fields: dict, key: str) -> bool:
     return st.button("View details", key=key, use_container_width=True)
 
 
+def _build_ticket_note(svc: dict) -> str:
+    lines = [
+        f"=== Caller Handling Note ===",
+        f"Service: {svc['service']}",
+        f"Status: {svc['status_label']}",
+    ]
+    if svc.get("incident_id"):
+        lines.append(f"Reference: {svc['incident_id']}")
+    lines.append("")
+    lines.append(f"Told caller: {svc['what_to_say']}")
+    lines.append("")
+    lines.append("To collect:")
+    if svc["what_to_collect"]:
+        for item in svc["what_to_collect"]:
+            lines.append(f"  - {item}")
+    else:
+        lines.append("  - Nothing specific")
+    lines.append("")
+    lines.append("Do NOT promise:")
+    for item in svc["what_not_to_do"]:
+        lines.append(f"  - {item}")
+    lines.append("")
+    lines.append(f"Escalation: {svc['support_instruction']}")
+    return "\n".join(lines)
+
+
 def render_detail_panel(svc: dict, view_fields: dict):
     color = svc["status_color"]
 
@@ -83,8 +109,17 @@ def render_detail_panel(svc: dict, view_fields: dict):
             st.markdown(
                 f"**System Status:** {svc.get('host_module_plain', 'No data available.')}"
             )
-        if view_fields["show_evidence_source"]:
-            st.markdown(f"**Evidence:** {svc['evidence_source']}")
+        if view_fields["show_technical_evidence"]:
+            st.markdown(
+                f"**Technical Evidence:** {svc.get('technical_evidence', 'No data')}"
+            )
+        else:
+            st.markdown(f"**Caller Reports:** {svc.get('support_evidence', 'No data')}")
+
+        if svc.get("affected_workflows"):
+            st.markdown("**Affected Workflows:**")
+            for wf in svc["affected_workflows"]:
+                st.markdown(f"- {wf}")
 
     with col2:
         st.markdown("**What to say to caller:**")
@@ -101,6 +136,17 @@ def render_detail_panel(svc: dict, view_fields: dict):
         st.warning(item)
 
     st.markdown(f"**Escalation:** {svc['support_instruction']}")
+
+    st.markdown("---")
+    st.markdown("#### Copy/Paste Ticket Note")
+    note = _build_ticket_note(svc)
+    st.text_area(
+        "Copy this note into your ticket system",
+        value=note,
+        height=280,
+        key=f"note_{svc['service']}",
+        label_visibility="collapsed",
+    )
 
 
 def render_timeline(svc: dict):
@@ -143,7 +189,7 @@ def render_signal_table(evidence_rows: list[dict]):
 
 def render_known_issues(issues: list[dict]):
     if not issues:
-        st.info("No active known issues.")
+        st.info("No active service notices.")
         return
 
     for issue in issues:

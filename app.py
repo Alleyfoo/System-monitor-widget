@@ -166,7 +166,6 @@ def main():
 
         st.markdown("---")
         if st.button("Refresh mock data", use_container_width=True, type="primary"):
-            st.session_state.mock_seed = int(np.random.default_rng().integers(0, 2**31))
             st.session_state.base_time = datetime.now(timezone.utc)
             st.session_state.selected_service = None
             st.rerun()
@@ -180,8 +179,6 @@ def main():
         )
 
     # ── Initialize / retrieve session state ───────────────────────────────────
-    if "mock_seed" not in st.session_state:
-        st.session_state.mock_seed = int(np.random.default_rng().integers(0, 2**31))
     if "base_time" not in st.session_state:
         st.session_state.base_time = datetime.now(timezone.utc)
     if "selected_service" not in st.session_state:
@@ -220,9 +217,9 @@ def main():
     st.markdown("### Summary")
     render_top_metrics(metrics)
 
-    # ── Active known issues ───────────────────────────────────────────────────
+    # ── Active service notices ────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("### Active Known Issues")
+    st.markdown("### Active Service Notices")
     render_known_issues(known_issues)
 
     # ── Service cards grid ────────────────────────────────────────────────────
