@@ -22,17 +22,17 @@ SERVICES = [
 ]
 
 STATUS_COLORS = {
-    "green": "#16A34A",
-    "orange": "#EA580C",
-    "red": "#DC2626",
-    "grey": "#9CA3AF",
-    "blue": "#2563EB",
+    "green": "#4F8254",
+    "orange": "#C8702A",
+    "red": "#BE3F38",
+    "grey": "#7C7B74",
+    "blue": "#466196",
 }
 
 STATUS_LABELS = {
     "green": "Healthy",
     "orange": "Degraded",
-    "red": "Major Issue",
+    "red": "Major issue",
     "grey": "Unknown",
     "blue": "Maintenance",
 }
@@ -426,6 +426,44 @@ def generate_timeline_events(
     return events
 
 
+def generate_status_ribbon(
+    service: str, status: str, base_time: datetime
+) -> list[str]:
+    """Return 24 5-minute status ticks ending at base_time."""
+    rng = _seeded_random(f"ribbon-{service}-{base_time.isoformat()}")
+    if status == "green":
+        return ["green"] * 24
+    if status == "blue":
+        return ["green"] * 18 + ["blue"] * 6
+    if status == "grey":
+        return ["green"] * 14 + ["grey"] * 10
+    if status == "orange":
+        # 18 green, then 6 orange tail
+        return ["green"] * 18 + ["orange"] * 6
+    if status == "red":
+        # green → orange → red over the trailing third
+        return ["green"] * 14 + ["orange"] * 4 + ["red"] * 6
+    return ["green"] * 24
+
+
+def generate_traffic_series(
+    service: str, status: str, base_time: datetime
+) -> list[float]:
+    """Return an 11-point synthetic series for the card sparkline."""
+    rng = _seeded_random(f"spark-{service}-{base_time.isoformat()}")
+    if status == "red":
+        base = [3.0 + i * 1.3 for i in range(11)]
+    elif status == "orange":
+        base = [3.0 + i * 0.7 for i in range(11)]
+    elif status == "blue":
+        base = [6.0 - i * 0.1 for i in range(11)]
+    elif status == "grey":
+        base = [5.0] * 11
+    else:
+        base = [6.0] * 11
+    return [v + float(rng.uniform(-0.4, 0.4)) for v in base]
+
+
 def generate_signal_evidence(services_data: list[dict]) -> list[dict]:
     rows = []
     for svc in services_data:
@@ -466,6 +504,8 @@ def generate_summary_metrics(services_data: list[dict], base_time: datetime) -> 
     normal_calls = len(services_data) * 2
     call_spike = round((total_calls - normal_calls) / max(normal_calls, 1) * 100)
 
+    green_count = sum(1 for s in services_data if s["status"] == "green")
+
     return {
         "overall_status": overall,
         "overall_label": STATUS_LABELS[overall],
@@ -476,6 +516,11 @@ def generate_summary_metrics(services_data: list[dict], base_time: datetime) -> 
         "tickets_last_hour": total_tickets,
         "call_spike_pct": call_spike,
         "last_updated": base_time.strftime("%Y-%m-%d %H:%M"),
+        "red_count": red_count,
+        "orange_count": orange_count,
+        "green_count": green_count,
+        "grey_count": grey_count,
+        "blue_count": blue_count,
     }
 
 
@@ -483,17 +528,21 @@ def generate_known_issues(services_data: list[dict], base_time: datetime) -> lis
     issues = []
     for idx, svc in enumerate(services_data):
         if svc["status"] in ("red", "orange", "grey", "blue"):
-            started = (base_time - timedelta(minutes=30 + idx * 15)).strftime("%H:%M")
+            started_dt = base_time - timedelta(minutes=30 + idx * 15)
             issues.append(
                 {
                     "incident_id": svc["incident_id"],
                     "title": f"{svc['service']} — {svc['status_label']}",
+                    "service": svc["service"],
                     "status": svc["status_label"],
+                    "status_key": svc["status"],
                     "status_color": svc["status_color"],
-                    "started": started,
+                    "started": started_dt.strftime("%H:%M"),
+                    "started_utc": started_dt.strftime("%H:%M UTC"),
                     "affected_service": svc["service"],
+                    "evidence": svc.get("technical_evidence", ""),
                     "owner": (
-                        "Platform Engineering"
+                        "Platform Eng"
                         if svc["status"] == "red"
                         else "Service Ops"
                     ),
