@@ -107,7 +107,8 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-feature-settings: 'zero','ss01'; }
 .tnum { font-variant-numeric: tabular-nums; }
 
-.block-container { padding: 22px 28px 60px !important; max-width: none !important; }
+.block-container { padding: 64px 28px 60px !important; max-width: none !important; }
+[data-testid="stHeader"] { background: transparent !important; }
 
 /* Sidebar overrides */
 [data-testid="stSidebar"] { background: var(--sidebar) !important; }
