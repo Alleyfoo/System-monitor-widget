@@ -10,7 +10,9 @@ from mock_data import (
     SERVICES,
     generate_incident_id_for_service,
     generate_service_data,
+    generate_status_ribbon,
     generate_timeline_events,
+    generate_traffic_series,
 )
 
 SCENARIOS = {
@@ -108,6 +110,8 @@ def load_scenario(name: str, base_time: datetime | None = None) -> dict:
             incident_id = generate_incident_id_for_service(service, base_time)
         svc = generate_service_data(service, status, base_time, incident_id)
         svc["timeline"] = generate_timeline_events(service, status, base_time)
+        svc["ribbon"] = generate_status_ribbon(service, status, base_time)
+        svc["traffic_series"] = generate_traffic_series(service, status, base_time)
         services_data.append(svc)
 
     return {
