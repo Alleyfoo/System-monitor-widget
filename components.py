@@ -436,11 +436,6 @@ def render_detail_panel(svc: dict, view_fields: dict, base_time=None):
     st.html(panel_html)
 
 
-def render_timeline(svc: dict):
-    # Timeline is now rendered inside render_detail_panel; kept for compatibility.
-    return
-
-
 def render_signal_table(evidence_rows: list[dict], services_data: list[dict]):
     svc_map = {s["service"]: s for s in services_data}
     rows = []
